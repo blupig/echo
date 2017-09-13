@@ -11,6 +11,11 @@ import (
 
 // rootHandler handles requests to /
 func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
 	fmt.Fprint(w, "<html><pre><b>routes:</b>\n"+
 		"/\n"+
 		"/health\n"+

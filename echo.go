@@ -32,7 +32,7 @@ func cacheHandler(w http.ResponseWriter, r *http.Request) {
 	// Delayed response, but allows caching
 	t := time.NewTimer(500 * time.Millisecond)
 	<-t.C
-	w.Header().Set("Cache-Control", "max-age=60") // 1 minute
+	w.Header().Set("Cache-Control", "public, max-age=60") // 1 minute
 	fmt.Fprint(w, "ok")
 }
 

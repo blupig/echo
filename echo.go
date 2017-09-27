@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 // rootHandler handles requests to /
@@ -17,17 +18,41 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, "<html><pre><b>routes:</b>\n"+
-		"/\n"+
-		"/health\n"+
-		"/headers\n"+
-		"/ip\n"+
-		"/cpu\n"+
-		"/exit\n"+
+		"/         root (this route)\n"+
+		"/cache    returns cacheable but delayed (500ms) response\n"+
+		"/cpu      CPU-intensive operation\n"+
+		"/exit     causes server process to exit immediately\n"+
+		"/headers  returns request headers as JSON\n"+
+		"/health   returns health info\n"+
+		"/ip       returns client IP\n"+
 		"</pre></html>")
 }
 
-func healthHandler(w http.ResponseWriter, r *http.Request) {
+func cacheHandler(w http.ResponseWriter, r *http.Request) {
+	// Delayed response, but allows caching
+	t := time.NewTimer(500 * time.Millisecond)
+	<-t.C
+	w.Header().Set("Cache-Control", "max-age=60") // 1 minute
 	fmt.Fprint(w, "ok")
+}
+
+func cpuHandler(w http.ResponseWriter, r *http.Request) {
+	// Handlers are already executed asynchronously
+	fmt.Fprint(w, cpuLoad())
+}
+
+// cpuLoad performs CPU-intensive operations
+func cpuLoad() string {
+	for i := 0; i < 1000000; i++ {
+		sha256.Sum256([]byte("abc"))
+	}
+	return fmt.Sprint("")
+}
+
+func exitHandler(w http.ResponseWriter, r *http.Request) {
+	// Not a graceful shutdown
+	log.Println("Exiting...")
+	os.Exit(0)
 }
 
 func headersHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +65,10 @@ func headersHandler(w http.ResponseWriter, r *http.Request) {
 	// Marshal with indent
 	m, _ := json.MarshalIndent(headers, "", "    ")
 	fmt.Fprint(w, string(m))
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "ok")
 }
 
 func ipHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,25 +86,6 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(m))
 }
 
-func cpuHandler(w http.ResponseWriter, r *http.Request) {
-	// Handlers are already executed asynchronously
-	fmt.Fprint(w, cpuLoad())
-}
-
-func exitHandler(w http.ResponseWriter, r *http.Request) {
-	// Not a graceful shutdown
-	log.Println("Exiting...")
-	os.Exit(0)
-}
-
-// cpuLoad performs CPU-intensive operations
-func cpuLoad() string {
-	for i := 0; i < 1000000; i++ {
-		sha256.Sum256([]byte("abc"))
-	}
-	return fmt.Sprint("")
-}
-
 // main initializes application
 func main() {
 	// Configuration
@@ -86,11 +96,12 @@ func main() {
 
 	// Routes
 	http.HandleFunc("/", rootHandler)
-	http.HandleFunc("/health", healthHandler)
-	http.HandleFunc("/headers", headersHandler)
-	http.HandleFunc("/ip", ipHandler)
+	http.HandleFunc("/cache", cacheHandler)
 	http.HandleFunc("/cpu", cpuHandler)
 	http.HandleFunc("/exit", exitHandler)
+	http.HandleFunc("/headers", headersHandler)
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/ip", ipHandler)
 
 	// Start serving
 	log.Println("Starting service...")

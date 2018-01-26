@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var src_commit string
+
 // rootHandler handles requests to /
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -17,14 +19,16 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, "<html><pre><b>routes:</b>\n"+
-		"/         root (this route)\n"+
-		"/cache    returns cacheable but delayed (500ms) response\n"+
-		"/cpu      CPU-intensive operation\n"+
-		"/exit     causes server process to exit immediately\n"+
-		"/headers  returns request headers as JSON\n"+
-		"/health   returns health info\n"+
-		"/ip       returns client IP\n"+
+	fmt.Fprint(w, "<html><pre><b>routes:</b>\n" +
+		"/         root (this route)\n" +
+		"/cache    returns cacheable but delayed (500ms) response\n" +
+		"/cpu      CPU-intensive operation\n" +
+		"/exit     causes server process to exit immediately\n" +
+		"/headers  returns request headers as JSON\n" +
+		"/health   returns health info\n" +
+		"/ip       returns client IP\n" +
+		"\n" +
+		"Source commit: " + src_commit + "\n" +
 		"</pre></html>")
 }
 
@@ -105,5 +109,6 @@ func main() {
 
 	// Start serving
 	log.Println("Starting service...")
-	http.ListenAndServe(":"+port, nil)
+	log.Println("Source commit: " + src_commit)
+	http.ListenAndServe(":" + port, nil)
 }

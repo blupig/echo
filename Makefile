@@ -1,4 +1,5 @@
 all:
-	@CGO_ENABLED=0 GOOS=linux go build -o build/echo -a -ldflags '-extldflags "-static"' .
 	@docker build -t yunzhu/echo .
+
+push: all
 	@docker push yunzhu/echo

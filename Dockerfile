@@ -7,7 +7,7 @@ WORKDIR /src
 ARG SOURCE_COMMIT
 
 # Build application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /build/echo -a -ldflags "-X main.src_commit=${SOURCE_COMMIT} -extldflags \"-static\"" .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /build/echo -a -ldflags "-X main.src_commit=${SOURCE_COMMIT} -extldflags \"-static\"" app
 
 # Minimum runtime container (can also be FROM scratch)
 FROM alpine

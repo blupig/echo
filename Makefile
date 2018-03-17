@@ -1,5 +1,16 @@
 all:
-	@docker build -t yunzhu/echo --build-arg SOURCE_COMMIT=$(shell git rev-parse HEAD) .
+	@echo "make [run | test | docker-build | docker-push]
 
-push: all
-	@docker push yunzhu/echo
+# Run locally
+run:
+	@go run app/echo.go
+
+test:
+	@go test -v -cover
+
+# Build docker image for Linux
+docker-build:
+	@docker build -t blupig/echo --build-arg SOURCE_COMMIT=$(shell git rev-parse HEAD) .
+
+docker-push: all
+	@docker push blupig/echo

@@ -23,9 +23,12 @@ jobs:
           name: "Report coverage info"
           command: "goveralls -coverprofile=coverage.out -service=circle-ci  -repotoken $COVERALLS_TOKEN"
 
-  deploy:
+  publish:
     docker:
       - image: circleci/golang:1.9
+
+   environment:
+      - DOCKER_USERNAME: blupigci
 
     # Project path in GOPATH
     working_directory: /go/src/github.com/blupig/echo
@@ -39,15 +42,23 @@ jobs:
           command: "go get -v -t -d ."
 
       - run:
+          name: "Login docker"
+          command: "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
+
+      - run:
           name: "Build docker image"
           command: "make docker-build"
+
+      - run:
+          name: "Push docker image"
+          command: "make docker-push"
 
 workflows:
   version: 2
   build-deploy:
     jobs:
       - build
-      - deploy:
+      - publish:
           requires:
             - build
           filters:

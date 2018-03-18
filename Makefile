@@ -8,7 +8,7 @@ run:
 test:
 	@go test -v -cover
 
-# Build docker image for Linux
+# Build / push docker image for blupig/echo repo
 docker-build:
 	@docker build -t blupig/echo --build-arg SOURCE_COMMIT=$(shell git rev-parse HEAD) .
 

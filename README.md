@@ -1,5 +1,5 @@
 # echo
-A simple web service that provides a few basic endpoints
+A simple web service that provides a few basic endpoints.
 
 ## Endpoints
 API is avaliable at https://api.blupig.net/echo
@@ -9,7 +9,7 @@ Avaliable endpoints:
 - `GET /cpu`: performs CPU-intensive operation on server-side (requires API token)
 - `GET /exit`: causes server process to exit (requires API token)
 - `GET /headers`: returns request headers in JSON
-- `GET /health`: returns application status
+- `GET /health`: returns application health info
 - `GET /ip`: returns client IP (uses `X-Forwarded-For` if present, otherwise returns client IP)
 
 ## Deploy

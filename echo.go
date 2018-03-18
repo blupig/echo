@@ -34,12 +34,12 @@ import (
 
 var testMode = false
 var srcCommit string
-var exitToken string
+var apiToken string
 
 // main initializes application and starts serving requests
 func main() {
 	// Configuration
-	exitToken = os.Getenv("EXIT_TOKEN")
+	apiToken = os.Getenv("API_TOKEN")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
@@ -63,6 +63,14 @@ func main() {
 	}
 }
 
+// validateAPIToken validates API token
+func validateAPIToken(token string) bool {
+	if apiToken == "" || token != apiToken {
+		return false
+	}
+	return true
+}
+
 // rootHandler handles requests to /
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -73,12 +81,13 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "<html><pre><b>routes:</b>\n"+
 		"/         root (this route)\n"+
 		"/cache    returns cacheable but delayed (500ms) response\n"+
-		"/cpu      CPU-intensive operation\n"+
-		"/exit     causes server process to exit immediately, requires a token in header X-Exit-Token\n"+
-		"/headers  returns request headers as JSON\n"+
-		"/health   returns health info\n"+
-		"/ip       returns client IP (use X-Forwarded-For header if exists, then remote IP)\n"+
+		"/cpu      performs CPU-intensive operation, requires API token\n"+
+		"/exit     causes server process to exit immediately, requires API token\n"+
+		"/headers  returns request headers in JSON\n"+
+		"/health   returns application health info\n"+
+		"/ip       returns client IP (uses X-Forwarded-For if present, otherwise remote IP)\n"+
 		"\n"+
+		"Include API token in X-Api-Token header.\n"+
 		"Source commit: "+srcCommit+"\n"+
 		"</pre></html>")
 }
@@ -95,6 +104,14 @@ func cacheHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func cpuHandler(w http.ResponseWriter, r *http.Request) {
+	// Validate exit token
+	token := r.Header.Get("X-Api-Token")
+	if !validateAPIToken(token) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Invalid API token\n")
+		return
+	}
+
 	// Handlers are already executed asynchronously
 	fmt.Fprint(w, cpuLoad())
 }
@@ -109,10 +126,10 @@ func cpuLoad() string {
 
 func exitHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate exit token
-	token := r.Header.Get("X-Exit-Token")
-	if token == "" || token != exitToken {
+	token := r.Header.Get("X-Api-Token")
+	if !validateAPIToken(token) {
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Invalid exit token\n")
+		fmt.Fprint(w, "Invalid API token\n")
 		return
 	}
 

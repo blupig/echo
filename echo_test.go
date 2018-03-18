@@ -36,6 +36,17 @@ func TestMain(t *testing.T) {
 	main()
 }
 
+func TestValidateAPIToken(t *testing.T) {
+	// Empty token is not allowed
+	apiToken = ""
+	assert.False(t, validateAPIToken(""), "Empty configured and provided token")
+	assert.False(t, validateAPIToken("some-token"), "Empty token configured, non-empty provided")
+
+	apiToken = "real-token"
+	assert.False(t, validateAPIToken("fake-token"), "Non-empty token configured, wrong token provided")
+	assert.True(t, validateAPIToken("real-token"), "Correct non-empty provided")
+}
+
 func TestRootHandler(t *testing.T) {
 	// Root path
 	// Make request
@@ -72,38 +83,37 @@ func TestCacheHandler(t *testing.T) {
 }
 
 func TestCPUHandler(t *testing.T) {
-	// Make request
+	apiToken = "real-token"
+
+	// No token
 	r := httptest.NewRequest("GET", "/cpu", nil)
 	w := httptest.NewRecorder()
-
-	// Call handler
 	cpuHandler(w, r)
-
-	// Validate result
 	res := w.Result()
+	assert.Equal(t, 401, res.StatusCode, "Status code should be 401")
+
+	// Correct token
+	r = httptest.NewRequest("GET", "/cpu", nil)
+	r.Header.Set("X-Api-Token", "real-token")
+	w = httptest.NewRecorder()
+	cpuHandler(w, r)
+	res = w.Result()
 	assert.Equal(t, 200, res.StatusCode, "Status code should be 200")
 }
 
 func TestExitHandler(t *testing.T) {
-	// No X-Exit-Token
+	apiToken = "real-token"
+
+	// No token
 	r := httptest.NewRequest("GET", "/exit", nil)
 	w := httptest.NewRecorder()
 	exitHandler(w, r)
 	res := w.Result()
 	assert.Equal(t, 401, res.StatusCode, "Status code should be 401")
 
-	// Empty token
-	r = httptest.NewRequest("GET", "/exit", nil)
-	r.Header.Set("X-Exit-Token", "")
-	w = httptest.NewRecorder()
-	exitHandler(w, r)
-	res = w.Result()
-	assert.Equal(t, 401, res.StatusCode, "Status code should be 401")
-
 	// Wrong token
-	exitToken = "real-token"
 	r = httptest.NewRequest("GET", "/exit", nil)
-	r.Header.Set("X-Exit-Token", "fake-token")
+	r.Header.Set("X-Api-Token", "fake-token")
 	w = httptest.NewRecorder()
 	exitHandler(w, r)
 	res = w.Result()
@@ -123,9 +133,13 @@ func TestHeadersHandler(t *testing.T) {
 
 	// Validate result
 	res := w.Result()
-	body, _ := ioutil.ReadAll(res.Body)
 	assert.Equal(t, 200, res.StatusCode, "Status code should be 200")
-	assert.Equal(t, "{\n    \"X-Test-Header\": \"test\"\n}", string(body), "aaa")
+
+	var respObj map[string]interface{}
+	body, _ := ioutil.ReadAll(res.Body)
+	err := json.Unmarshal(body, &respObj)
+	assert.NoError(t, err, "Should return valid JSON")
+	assert.Equal(t, "test", respObj["X-Test-Header"], "Should return request headers")
 }
 
 func TestHealthHandler(t *testing.T) {

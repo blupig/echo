@@ -1,16 +1,16 @@
 all:
-	@echo "make [run | test | docker-build | docker-push]
+	@echo "make [run | test | docker-build | docker-push]"
 
 # Run locally
 run:
-	@go run app/echo.go
+	@go run echo.go
 
 test:
 	@go test -v -cover
 
-# Build docker image for Linux
+# Build / push docker image for blupig/echo repo
 docker-build:
 	@docker build -t blupig/echo --build-arg SOURCE_COMMIT=$(shell git rev-parse HEAD) .
 
-docker-push: all
+docker-push:
 	@docker push blupig/echo

@@ -1,10 +1,13 @@
 # echo
-A simple web service that provides a few basic endpoints.
+A very lightweight web service that provides a few basic endpoints.
+
+[![CircleCI](https://circleci.com/gh/blupig/echo.svg?style=svg)](https://circleci.com/gh/blupig/echo)
+[![Coverage Status](https://coveralls.io/repos/github/blupig/echo/badge.svg?branch=ci)](https://coveralls.io/github/blupig/echo?branch=ci)
 
 ## Endpoints
-API is avaliable at https://api.blupig.net/echo
+API is available at https://api.blupig.net/echo
 
-Avaliable endpoints:
+Available endpoints:
 - `GET /cache`: cacheable content with increased latency (help debugging caching layer)
 - `GET /cpu`: performs CPU-intensive operation on server-side (requires API token)
 - `GET /exit`: causes server process to exit (requires API token)

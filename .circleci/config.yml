@@ -1,0 +1,66 @@
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/golang:1.9
+
+    # Project path in GOPATH
+    working_directory: /go/src/github.com/blupig/echo
+    steps:
+      # Checkout code
+      - checkout
+
+      - run:
+          name: "Install packages"
+          command: "go get -v -t -d . && go get github.com/mattn/goveralls"
+
+      - run:
+          name: "Run tests"
+          command: "go test -v -covermode=count -coverprofile=coverage.out"
+
+      - run:
+          name: "Report coverage info"
+          command: "goveralls -coverprofile=coverage.out -service=circle-ci  -repotoken $COVERALLS_TOKEN"
+
+  publish:
+    docker:
+      - image: circleci/golang:1.9
+
+    environment:
+      - DOCKER_USERNAME: blupigci
+
+    # Project path in GOPATH
+    working_directory: /go/src/github.com/blupig/echo
+
+    steps:
+      - checkout
+      - setup_remote_docker
+
+      - run:
+          name: "Install packages"
+          command: "go get -v -t -d ."
+
+      - run:
+          name: "Login docker"
+          command: "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
+
+      - run:
+          name: "Build docker image"
+          command: "make docker-build"
+
+      - run:
+          name: "Push docker image"
+          command: "make docker-push"
+
+workflows:
+  version: 2
+  build-deploy:
+    jobs:
+      - test
+      - publish:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master

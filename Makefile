@@ -12,5 +12,5 @@ test:
 docker-build:
 	@docker build -t blupig/echo --build-arg SOURCE_COMMIT=$(shell git rev-parse HEAD) .
 
-docker-push: all
+docker-push:
 	@docker push blupig/echo

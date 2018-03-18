@@ -43,7 +43,7 @@ jobs:
 
       - run:
           name: "Login docker"
-          command: "docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD"
+          command: "echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin"
 
       - run:
           name: "Build docker image"

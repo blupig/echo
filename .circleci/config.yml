@@ -8,7 +8,17 @@ jobs:
     # Project path in GOPATH
     working_directory: /go/src/github.com/blupig/echo
     steps:
+      # Checkout code
       - checkout
-      - run: go get github.com/mattn/goveralls
-      - run: go get -v -t -d
-      - run: go test -v -cover
+
+      - run:
+          name: "Install packages"
+          command: "go get -v -t -d . && go get github.com/mattn/goveralls"
+
+      - run:
+          name: "Run tests"
+          command: "go test -v -covermode=count -coverprofile=coverage.out"
+
+      - run:
+          name: "Report coverage info"
+          command: "goveralls -coverprofile=coverage.out -service=circle-ci"

@@ -27,7 +27,7 @@ jobs:
     docker:
       - image: circleci/golang:1.9
 
-   environment:
+    environment:
       - DOCKER_USERNAME: blupigci
 
     # Project path in GOPATH

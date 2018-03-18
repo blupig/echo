@@ -21,4 +21,4 @@ jobs:
 
       - run:
           name: "Report coverage info"
-          command: "goveralls -coverprofile=coverage.out -service=circle-ci"
+          command: "goveralls -coverprofile=coverage.out -service=circle-ci  -repotoken $COVERALLS_TOKEN"

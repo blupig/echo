@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2018 Yunzhu Li
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package main
 
 import (
@@ -10,89 +32,14 @@ import (
 	"time"
 )
 
-var src_commit string
+var testMode = false
+var srcCommit string
+var apiToken string
 
-// rootHandler handles requests to /
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-
-	fmt.Fprint(w, "<html><pre><b>routes:</b>\n" +
-		"/         root (this route)\n" +
-		"/cache    returns cacheable but delayed (500ms) response\n" +
-		"/cpu      CPU-intensive operation\n" +
-		"/exit     causes server process to exit immediately\n" +
-		"/headers  returns request headers as JSON\n" +
-		"/health   returns health info\n" +
-		"/ip       returns client IP\n" +
-		"\n" +
-		"Source commit: " + src_commit + "\n" +
-		"</pre></html>")
-}
-
-func cacheHandler(w http.ResponseWriter, r *http.Request) {
-	// Delayed response, but allows caching
-	t := time.NewTimer(500 * time.Millisecond)
-	<-t.C
-	w.Header().Set("Cache-Control", "public, max-age=60") // 1 minute
-	fmt.Fprint(w, "ok")
-}
-
-func cpuHandler(w http.ResponseWriter, r *http.Request) {
-	// Handlers are already executed asynchronously
-	fmt.Fprint(w, cpuLoad())
-}
-
-// cpuLoad performs CPU-intensive operations
-func cpuLoad() string {
-	for i := 0; i < 1000000; i++ {
-		sha256.Sum256([]byte("abc"))
-	}
-	return fmt.Sprint("")
-}
-
-func exitHandler(w http.ResponseWriter, r *http.Request) {
-	// Not a graceful shutdown
-	log.Println("Exiting...")
-	os.Exit(0)
-}
-
-func headersHandler(w http.ResponseWriter, r *http.Request) {
-	// Join header values
-	headers := make(map[string]string)
-	for name, _ := range r.Header {
-		headers[name] = r.Header.Get(name)
-	}
-
-	// Marshal with indent
-	m, _ := json.MarshalIndent(headers, "", "    ")
-	fmt.Fprint(w, string(m))
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "ok")
-}
-
-func ipHandler(w http.ResponseWriter, r *http.Request) {
-	// Try to get remote IP from xff header first
-	remote_addr := r.Header.Get("x-forwarded-for")
-
-	// Use client IP if no xff header
-	if remote_addr == "" {
-		remote_addr = r.RemoteAddr
-	}
-
-	// Write JSON
-	result := map[string]string{"remote_addr": remote_addr}
-	m, _ := json.MarshalIndent(result, "", "    ")
-	fmt.Fprint(w, string(m))
-}
-
-// main initializes application
+// main initializes application and starts serving requests
 func main() {
 	// Configuration
+	apiToken = os.Getenv("API_TOKEN")
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
@@ -108,7 +55,116 @@ func main() {
 	http.HandleFunc("/ip", ipHandler)
 
 	// Start serving
-	log.Println("Starting service...")
-	log.Println("Source commit: " + src_commit)
-	http.ListenAndServe(":" + port, nil)
+	log.Println("Starting service on " + port)
+	log.Println("Source commit: " + srcCommit)
+
+	if !testMode {
+		http.ListenAndServe(":"+port, nil)
+	}
+}
+
+// validateAPIToken validates API token
+func validateAPIToken(token string) bool {
+	if apiToken == "" || token != apiToken {
+		return false
+	}
+	return true
+}
+
+// rootHandler handles requests to /
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	fmt.Fprint(w, "<html><pre><b>routes:</b>\n"+
+		"/         root (this route)\n"+
+		"/cache    returns cacheable but delayed (500ms) response\n"+
+		"/cpu      performs CPU-intensive operation, requires API token\n"+
+		"/exit     causes server process to exit immediately, requires API token\n"+
+		"/headers  returns request headers in JSON\n"+
+		"/health   returns application health info\n"+
+		"/ip       returns client IP (uses X-Forwarded-For if present, otherwise remote IP)\n"+
+		"\n"+
+		"Include API token in X-Api-Token header.\n"+
+		"Source commit: "+srcCommit+"\n"+
+		"</pre></html>")
+}
+
+func cacheHandler(w http.ResponseWriter, r *http.Request) {
+	// Delayed response, but allows caching
+	timer := time.NewTimer(500 * time.Millisecond)
+	<-timer.C
+	w.Header().Set("Cache-Control", "public, max-age=10") // 10 seconds
+
+	// Response with current time
+	t := time.Now()
+	fmt.Fprint(w, t.Format("060102_150405"))
+}
+
+func cpuHandler(w http.ResponseWriter, r *http.Request) {
+	// Validate exit token
+	token := r.Header.Get("X-Api-Token")
+	if !validateAPIToken(token) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Invalid API token\n")
+		return
+	}
+
+	// Handlers are already executed asynchronously
+	fmt.Fprint(w, cpuLoad())
+}
+
+// cpuLoad performs CPU-intensive operations
+func cpuLoad() string {
+	for i := 0; i < 1000000; i++ {
+		sha256.Sum256([]byte("abc"))
+	}
+	return fmt.Sprint("")
+}
+
+func exitHandler(w http.ResponseWriter, r *http.Request) {
+	// Validate exit token
+	token := r.Header.Get("X-Api-Token")
+	if !validateAPIToken(token) {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Invalid API token\n")
+		return
+	}
+
+	// Not a graceful shutdown
+	log.Println("Exiting due to /exit")
+	os.Exit(0)
+}
+
+func headersHandler(w http.ResponseWriter, r *http.Request) {
+	// Join header values
+	headers := make(map[string]string)
+	for name := range r.Header {
+		headers[name] = r.Header.Get(name)
+	}
+
+	// Marshal with indent
+	m, _ := json.MarshalIndent(headers, "", "    ")
+	fmt.Fprint(w, string(m))
+}
+
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "ok")
+}
+
+func ipHandler(w http.ResponseWriter, r *http.Request) {
+	// Try to get remote IP from xff header first
+	remoteAddr := r.Header.Get("x-forwarded-for")
+
+	// Use client IP if no xff header
+	if remoteAddr == "" {
+		remoteAddr = r.RemoteAddr
+	}
+
+	// Write JSON
+	result := map[string]string{"remote_addr": remoteAddr}
+	m, _ := json.MarshalIndent(result, "", "    ")
+	fmt.Fprint(w, string(m))
 }

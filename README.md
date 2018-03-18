@@ -1,6 +1,8 @@
 # echo
 A simple web service that provides a few basic endpoints.
 
+[![CircleCI](https://circleci.com/gh/blupig/echo.svg?style=svg)](https://circleci.com/gh/blupig/echo)
+
 ## Endpoints
 API is avaliable at https://api.blupig.net/echo
 

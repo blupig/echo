@@ -1,9 +1,9 @@
 all:
-	@echo "make [run | test | docker-build | docker-push]
+	@echo "make [run | test | docker-build | docker-push]"
 
 # Run locally
 run:
-	@go run app/echo.go
+	@go run echo.go
 
 test:
 	@go test -v -cover
